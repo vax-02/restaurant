@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     // CRUD de usuarios (solo administradores)
     Route::resource('users', UserController::class);
+    Route::resource('products', ProductController::class);
+    Route::post('products/toggle', [ProductController::class,'toggleAvailable'])->name('products.toggle');
+
+
     Route::middleware(['can:admin'])->group(function () {
     });
 });
