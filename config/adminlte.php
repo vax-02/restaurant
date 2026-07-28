@@ -310,6 +310,21 @@ return [
             'topnav_right' => true,
         ],
 
+         // Dashboard
+        [
+            'text' => 'Dashboard',
+            'route' => 'admin.dashboard',
+            'icon' => 'fas fa-home',
+        ],
+
+        // Usuarios
+        [
+            'text' => 'Usuarios',
+            'route' => 'admin.users.index',
+            'icon' => 'fas fa-users',
+            'active' => ['admin/users*'],
+        ],
+
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
