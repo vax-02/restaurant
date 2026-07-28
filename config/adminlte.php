@@ -325,6 +325,14 @@ return [
             'active' => ['admin/users*'],
         ],
 
+
+        // Productos
+        [
+            'text' => 'Productos',
+            'route' => 'admin.products.index',
+            'icon' => 'fas fa-users',
+            'active' => ['admin/products*'],
+        ],
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
