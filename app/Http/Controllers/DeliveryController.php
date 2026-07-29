@@ -34,7 +34,7 @@ class DeliveryController extends Controller
             'name' => 'required|string|max:50',
             'lastname' => 'required|string|max:50',
             'cellphone' => 'required|string|max:8',
-            'user_telegram' => 'required|string|max:50',
+            'user_telegram' => 'nullable|string|max:50',
             'status' => 'nullable|boolean',
         ]);
 
@@ -79,7 +79,7 @@ class DeliveryController extends Controller
             'name' => 'required|string|max:50',
             'lastname' => 'required|string|max:50',
             'cellphone' => 'required|string|max:8',
-            'user_telegram' => 'required|string|max:50',
+            'user_telegram' => 'nullable|string|max:50',
             'status' => 'nullable|boolean',
         ]);
 

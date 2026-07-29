@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('name',50);
             $table->string('lastname',50);
             $table->string('cellphone',8);
-            $table->string('user_telegram',50);
+            $table->string('user_telegram',50)->nullable();
             $table->timestamps();
         });
     }
