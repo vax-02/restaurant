@@ -115,7 +115,7 @@
                                             {{ $product->category === 'plate' ? '🍽️ Plato' : '🥤 Líquido' }}
                                         </span>
                                     </td>
-                                    <td><strong>S/ {{ number_format($product->price, 2) }}</strong></td>
+                                    <td><strong>Bs/ {{ number_format($product->price, 2) }}</strong></td>
                                     <td>
                                         <div style="max-width: 120px;">
                                             <input type="number" 
