@@ -37,8 +37,6 @@
                         <th>ID</th>
                         <th>Cliente</th>
                         <th>Tipo</th>
-                        <th>Productos</th>
-                        <th>Total</th>
                         <th>Comprobante</th>
                         <th>Fecha</th>
                         <th>Asignar Delivery</th>
@@ -55,12 +53,6 @@
                                 </span>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#detailsModal{{ $buy->id }}">
-                                    <i class="fas fa-eye"></i> Ver detalles
-                                </button>
-                            </td>
-                            <td><strong>Bs. {{ number_format($buy->total, 2) }}</strong></td>
-                            <td>
                                 @if($buy->comprobante)
                                     <a href="{{ asset('storage/' . $buy->comprobante) }}" target="_blank" class="btn btn-sm btn-success">
                                         <i class="fas fa-image"></i> Ver
@@ -75,7 +67,9 @@
                                     <form action="{{ route('admin.buys.assign-delivery', $buy) }}" method="POST" class="form-inline">
                                         @csrf
                                         @method('PUT')
+
                                         <select name="delivery_id" class="form-control form-control-sm mr-1" required>
+                                            @if ( $buy->type == 'delivery' )
                                             <option value="">Seleccionar...</option>
                                             @foreach($deliveries as $delivery)
                                                 <option value="{{ $delivery->id }}">
@@ -83,9 +77,21 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-motorcycle"></i> Asignar
-                                        </button>
+                                       
+                                        
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-motorcycle"></i> Asignar
+                                            </button>
+                                            
+                                        @else
+                                            <form action="{{ route('buys.atender', $buy->id) }}" method="POST" style="display: inline;">
+                                                @csrf
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-motorcycle"></i> Atendido
+                                                </button>
+                                            </form>
+                                            
+                                        @endif
                                     </form>
                                     <button type="button" class="btn btn-danger btn-sm ml-1" data-toggle="modal" data-target="#cancelModal{{ $buy->id }}" title="Anular pedido">
                                         <i class="fas fa-ban"></i>
@@ -135,26 +141,33 @@
                                                 <tr>
                                                     <th>Producto</th>
                                                     <th>Precio</th>
+                                                    <th>Cantidad</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                @php
+                                                    $total = 0;
+                                                @endphp
+
                                                 @foreach($buy->details as $detail)
+                                                    @php
+                                                        $total += $detail->price * $detail->quantity
+                                                    @endphp
                                                     <tr>
                                                         <td>{{ $detail->product->name ?? 'Producto eliminado' }}</td>
                                                         <td>Bs. {{ number_format($detail->price, 2) }}</td>
+                                                        <td>{{ $detail->quantity }}</td>
+
                                                     </tr>
                                                 @endforeach
                                             </tbody>
                                             <tfoot>
                                                 <tr>
-                                                    <th>Total</th>
-                                                    <th>Bs. {{ number_format($buy->total, 2) }}</th>
+                                                    <th colspan="2">Total</th>
+                                                    <th>Bs. {{ number_format($total, 2) }}</th>
                                                 </tr>
                                             </tfoot>
                                         </table>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
                                     </div>
                                 </div>
                             </div>

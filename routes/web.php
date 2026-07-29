@@ -31,6 +31,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         return view('admin.dashboard');
     })->name('dashboard');
 
+    Route::post('/buys/{buy}/atender', [BuyController::class, 'marcarAtendido'])->name('buys.atender');
     // CRUD de usuarios (solo administradores)
     Route::resource('users', UserController::class);
     Route::get('buys/all', [BuyController::class, 'all'])->name('buys.all');
