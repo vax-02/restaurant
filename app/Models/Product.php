@@ -40,14 +40,50 @@ class Product extends Model
         return asset('images/default-product.png');
     }
 
-    // Solo productos disponibles para hoy
-    public function scopeAvailable($query)
-    {
-        return $query->where('available', true);
-    }
-
+    
     public function scopeCategory($query, $category)
     {
         return $query->where('category', $category);
     }
+
+      public function dailyAvailabilities()
+    {
+        return $this->hasMany(DailyAvailability::class);
+    }
+     public function todayAvailability()
+    {
+        return $this->hasOne(DailyAvailability::class)
+            ->where('date', today());
+    }
+
+    public function getTodayStockAttribute(): int
+    {
+        $availability = $this->todayAvailability()->first();
+        return $availability ? $availability->stock : 0;
+    }
+
+    // Verificar si tiene stock hoy
+    public function hasStockToday($quantity = 1): bool
+    {
+        return $this->today_stock >= $quantity;
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('available', true)
+            ->whereHas('todayAvailability', function ($q) {
+                $q->where('stock', '>', 0);
+            });
+    }
+    // Descontar stock
+    public function decrementStock($quantity = 1): bool
+    {
+        $availability = $this->todayAvailability()->first();
+        if ($availability && $availability->stock >= $quantity) {
+            $availability->decrement('stock', $quantity);
+            return true;
+        }
+        return false;
+    }
+
 }
