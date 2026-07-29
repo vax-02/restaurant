@@ -64,7 +64,6 @@
                             </td>
                             <td><strong>Bs. {{ number_format($buy->total, 2) }}</strong></td>
                             <td>
-                                {{  $buy->status }}
                                 <span class="badge badge-{{ $buy->status_color }}">{{ $buy->status_text }}</span>
                                 @if($buy->status == '-1' && $buy->cancel_reason)
                                     <br><small class="text-danger"><i class="fas fa-info-circle"></i> {{ $buy->cancel_reason }}</small>
@@ -84,11 +83,6 @@
                                 <a href="{{ route('admin.buys.show', $buy) }}" class="btn btn-info btn-sm" title="Ver detalle">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                @if($buy->status != '-1')
-                                    <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#cancelModal{{ $buy->id }}" title="Anular pedido">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                @endif
                             </td>
                         </tr>
                     @empty

@@ -122,4 +122,12 @@ class BuyController extends Controller
         return redirect()->route('admin.buys.index')
             ->with('success', 'Pedido asignado a ' . $delivery->full_name . ' correctamente');
     }
+    public function marcarAtendido(Buy $buy)
+    {
+        $buy->update([
+            'status' => '2',
+        ]);
+
+        return redirect()->back()->with('success', 'El pedido ha sido marcado como atendido.');
+    }
 }

@@ -33,12 +33,10 @@
         <div class="card-body table-responsive p-0">
             <table class="table table-hover text-nowrap">
                 <thead>
-                    <tr>
+                    <tr class="text-center">
                         <th>ID</th>
                         <th>Cliente</th>
                         <th>Tipo</th>
-                        <th>Productos</th>
-                        <th>Total</th>
                         <th>Comprobante</th>
                         <th>Fecha</th>
                         <th>Asignar Delivery</th>
@@ -46,7 +44,7 @@
                 </thead>
                 <tbody>
                     @forelse($buys as $buy)
-                        <tr>
+                        <tr class="text-center">
                             <td>{{ $buy->id }}</td>
                             <td>{{ $buy->client ?? 'Sin cliente' }}</td>
                             <td>
@@ -54,12 +52,6 @@
                                     {{ $buy->type == 'delivery' ? 'Delivery' : 'Restaurant' }}
                                 </span>
                             </td>
-                            <td>
-                                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#detailsModal{{ $buy->id }}">
-                                    <i class="fas fa-eye"></i> Ver detalles
-                                </button>
-                            </td>
-                            <td><strong>Bs. {{ number_format($buy->total, 2) }}</strong></td>
                             <td>
                                 @if($buy->comprobante)
                                     <a href="{{ asset('storage/' . $buy->comprobante) }}" target="_blank" class="btn btn-sm btn-success">
@@ -72,21 +64,34 @@
                             <td>{{ $buy->created_at->format('d/m/Y H:i') }}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <form action="{{ route('admin.buys.assign-delivery', $buy) }}" method="POST" class="form-inline">
-                                        @csrf
-                                        @method('PUT')
-                                        <select name="delivery_id" class="form-control form-control-sm mr-1" required>
-                                            <option value="">Seleccionar...</option>
-                                            @foreach($deliveries as $delivery)
-                                                <option value="{{ $delivery->id }}">
-                                                    {{ $delivery->full_name }} ({{ $delivery->code }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-motorcycle"></i> Asignar
-                                        </button>
-                                    </form>
+                                    @if ( $buy->type == 'delivery' )
+                                        <form action="{{ route('admin.buys.assign-delivery', $buy) }}" method="POST" class="form-inline">
+                                            @csrf
+                                            @method('PUT')
+
+                                            <select name="delivery_id" class="form-control form-control-sm mr-1" required>
+                                                <option value="">Seleccionar...</option>
+                                                @foreach($deliveries as $delivery)
+                                                    <option value="{{ $delivery->id }}">
+                                                        {{ $delivery->full_name }} ({{ $delivery->code }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-motorcycle"></i> Asignar
+                                            </button>
+                                        </form>
+                                            
+                                    @else
+                                        <form action="{{ route('admin.buys.atender', $buy->id) }}" method="POST" style="display: inline;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-check"></i> Atendido
+                                            </button>
+                                        </form>
+                                            
+                                    @endif
                                     <button type="button" class="btn btn-danger btn-sm ml-1" data-toggle="modal" data-target="#cancelModal{{ $buy->id }}" title="Anular pedido">
                                         <i class="fas fa-ban"></i>
                                     </button>
@@ -94,74 +99,32 @@
                             </td>
                         </tr>
 
-                        <!-- Modal Detalles del Pedido -->
-                        <div class="modal fade" id="detailsModal{{ $buy->id }}" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel{{ $buy->id }}" aria-hidden="true">
-                            <div class="modal-dialog modal-lg" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="detailsModalLabel{{ $buy->id }}">
-                                            Detalles del Pedido #{{ $buy->id }}
-                                        </h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <strong>Cliente:</strong> {{ $buy->client ?? 'Sin cliente' }}<br>
-                                                <strong>Tipo:</strong> {{ $buy->type == 'delivery' ? 'Delivery' : 'Restaurant' }}<br>
-                                                <strong>Fecha:</strong> {{ $buy->created_at->format('d/m/Y H:i') }}
-                                            </div>
-                                            <div class="col-md-6">
-                                                <strong>Estado:</strong> 
-                                                <span class="badge badge-{{ $buy->status_color }}">{{ $buy->status_text }}</span><br>
-                                                <strong>Total:</strong> Bs. {{ number_format($buy->total, 2) }}
-                                            </div>
-                                        </div>
-
-                                        @if($buy->comprobante)
-                                            <div class="text-center mb-3">
-                                                <strong>Comprobante:</strong><br>
-                                                <a href="{{ asset('storage/' . $buy->comprobante) }}" target="_blank">
-                                                    <img src="{{ asset('storage/' . $buy->comprobante) }}" alt="Comprobante" class="img-fluid img-thumbnail" style="max-height: 300px;">
-                                                </a>
-                                            </div>
-                                        @endif
-
-                                        <h6>Productos:</h6>
-                                        <table class="table table-sm table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>Producto</th>
-                                                    <th>Precio</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($buy->details as $detail)
-                                                    <tr>
-                                                        <td>{{ $detail->product->name ?? 'Producto eliminado' }}</td>
-                                                        <td>Bs. {{ number_format($detail->price, 2) }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                            <tfoot>
-                                                <tr>
-                                                    <th>Total</th>
-                                                    <th>Bs. {{ number_format($buy->total, 2) }}</th>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <tr class="text-center">
+                            <th colspan="2">Producto</th>
+                            <th colspan="2">Precio</th>
+                            <th colspan="2">Cantidad</th>
+                        </tr>
+                        @php
+                            $total = 0;
+                        @endphp
+                        @foreach($buy->details as $detail)
+                            @php
+                                $total += $detail->price * $detail->quantity
+                            @endphp
+                            <tr class="text-center">
+                                <td colspan="2">{{ $detail->product->name ?? 'Producto eliminado' }}</td>
+                                <td colspan="2">Bs. {{ number_format($detail->price, 2) }}</td>
+                                <td colspan="2">{{ $detail->quantity }}</td>
+                            </tr>
+                            @endforeach
+                            <tr class="text-center " style="border-bottom: 2px dashed black;">
+                                <th colspan="4">Total</th>
+                                <th colspan="2">Bs. {{ number_format($total, 2) }}</th>
+                            </tr>
+                                          
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center">No hay pedidos pendientes</td>
+                            <td colspan="6" class="text-center">No hay pedidos pendientes</td>
                         </tr>
                     @endforelse
                 </tbody>

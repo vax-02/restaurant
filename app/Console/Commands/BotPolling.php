@@ -1147,13 +1147,13 @@ class BotPolling extends Command
                 ]);
 
                 foreach ($cart as $item) {
-                    for ($i = 0; $i < $item['quantity']; $i++) {
-                        BuyDetail::create([
-                            'buy_id'     => $buy->id,
-                            'product_id' => $item['id'],
-                            'price'      => $item['price'],
-                        ]);
-                    }
+                    BuyDetail::create([
+                        'buy_id'     => $buy->id,
+                        'product_id' => $item['id'],
+                        'price'      => $item['price'],
+                        'quantity'   => $item['quantity'],
+                    ]);
+                    
 
                     $product = $this->getTodayProductsQuery()->where('id', $item['id'])->first();
                     if ($product) {
