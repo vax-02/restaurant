@@ -20,6 +20,7 @@
 | 2026-07-29 | #5 | Configuración de CSRF en Laravel 11 | Configuración en `bootstrap/app.php` para excluir rutas del webhook | Se probó con `curl` al webhook sin error 419 | Se agregó `$middleware->validateCsrfTokens(except: ['webhook'])` |
 | 2026-07-29 | - | Creación de comandos Artisan | Comandos `telegram:poll` y `telegram:set-webhook` | Se ejecutaron los comandos y se verificaron en la terminal | Se registraron los comandos en `routes/console.php` |
 
+| 2026-07-29 | - | Creacion del dashboard | migration,controller y archivo blade | Cambiando datos directo en la base de datos para validar cambios en el dash | Consultas y se modifico campos donde se detecto errores incoherentes |
 ---
 
 ##  Dónde NO se usó IA
