@@ -112,7 +112,7 @@
                                     </td>
                                     <td>
                                         <span class="badge badge-{{ $product->category === 'plate' ? 'primary' : 'info' }}">
-                                            {{ $product->category === 'plate' ? '🍽️ Plato' : '🥤 Líquido' }}
+                                            {{ $product->category === 'plato' ? '🍽️ Plato' : '🥤 Líquido' }}
                                         </span>
                                     </td>
                                     <td><strong>Bs/ {{ number_format($product->price, 2) }}</strong></td>

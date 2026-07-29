@@ -178,7 +178,7 @@ class BotPolling extends Command
     }
 
     // ==========================================
-    // MANEJO DE DELIVERY (UBICACIÓN EN VIVO)
+    // MANEJO DE DELIVERY (UBICACIÓN EN VIVO Y ESTADOS)
     // ==========================================
 
     /**
@@ -240,9 +240,7 @@ class BotPolling extends Command
      */
     protected function handleDeliveryStart($telegram, $chatId, $buyId)
     {
-        $delivery = Delivery::where('user_telegram', $chatId)
-            ->where('status', 1)
-            ->first();
+        $delivery = Delivery::where('user_telegram', $chatId)->first();
 
         if (!$delivery) {
             $telegram->sendMessage(
@@ -266,8 +264,14 @@ class BotPolling extends Command
             return;
         }
 
+        // Actualizar estado del pedido a iniciado/en camino (status = 1)
         $buy->update([
             'status' => '1',
+        ]);
+
+        // Cambiar estado del repartidor a inactivo/ocupado (status = 0)
+        $delivery->update([
+            'status' => 0
         ]);
 
         $this->userStates[$chatId]['state'] = 'delivery_tracking';
@@ -331,17 +335,14 @@ class BotPolling extends Command
             return;
         }
 
-        $buy = Buy::with('delivery')->find($buyId);
-
+        $buy = Buy::with('delivery')->find($buyId); 
         if (!$buy) {
             $telegram->sendMessage($chatId, "❌ Pedido no encontrado.");
             unset($this->userStates[$chatId]);
             return;
         }
 
-        $delivery = Delivery::where('user_telegram', $chatId)
-            ->where('status', 1)
-            ->first();
+        $delivery = Delivery::where('user_telegram', $chatId)->first();
 
         if (!$delivery || $buy->delivery_id != $delivery->id) {
             $telegram->sendMessage(
@@ -352,10 +353,16 @@ class BotPolling extends Command
             return;
         }
 
-        $buy->update([
-            'status' => '2',
-            'delivered_at' => now(),
-        ]);
+        // El repartidor vuelve a estar activo/disponible (status = 1)
+        /*$delivery->update([
+            'status' => 1
+        ]);*/
+        
+        // El pedido pasa a estado Entregado (status = 2)
+        /*$buy->update([
+            'status' => 2,
+            'updated_at' => now(),
+        ]);*/
 
         unset($this->userStates[$chatId]);
 
@@ -398,9 +405,19 @@ class BotPolling extends Command
         $buy = Buy::find($buyId);
 
         if ($buy) {
+            // El pedido pasa a pendiente (status = 0) para que el admin lo reasigne
             $buy->update([
-                'status' => '-1',
+                'status' => '0',
+                'delivery_id' => null,
                 'cancel_reason' => 'Cancelado por el repartidor',
+            ]);
+        }
+
+        // El repartidor vuelve a estar disponible (status = 1)
+        $delivery = Delivery::where('user_telegram', $chatId)->first();
+        if ($delivery) {
+            $delivery->update([
+                'status' => 1
             ]);
         }
 
@@ -695,9 +712,6 @@ class BotPolling extends Command
             return;
         }
 
-        $todayAvailability = $product->dailyAvailabilities->first();
-        $stock = $todayAvailability ? $todayAvailability->stock : 0;
-
         $name = $this->escapeMarkdown($product->name);
         $desc = $this->escapeMarkdown($product->description ?? '');
 
@@ -707,9 +721,6 @@ class BotPolling extends Command
         if ($desc) {
             $text .= "📝 *Descripción:* {$desc}\n";
         }
-
-        $text .= "\n🍽️ *Categoría:* " . ($product->category === Product::CATEGORY_PLATE ? 'Plato' : 'Bebida');
-        $text .= "\n📦 *Stock hoy:* {$stock}";
 
         $replyMarkup = new InlineKeyboardMarkup([
             [['text' => '🛒 Añadir al Carrito', 'callback_data' => 'comprar_' . $product->id]]
@@ -1127,21 +1138,13 @@ class BotPolling extends Command
         }
 
         try {
-            $assignedDelivery = null;
-
-            DB::transaction(function () use ($chatId, $state, $cart, $isDelivery, &$assignedDelivery) {
-                if ($isDelivery) {
-                    $assignedDelivery = Delivery::where('status', 1)
-                        ->whereNotNull('user_telegram')
-                        ->inRandomOrder()
-                        ->first();
-                }
-
+            DB::transaction(function () use ($chatId, $state, $cart, $isDelivery) {
+                // Registrar la compra sin asignar repartidor automáticamente (el Admin lo asignará)
                 $buy = Buy::create([
                     'comprobante' => $state['comprobante'] ?? 'sin_comprobante.jpg',
                     'client'      => (string) $chatId,
                     'type'        => $isDelivery ? 'delivery' : 'restaurant',
-                    'status'      => '0',
+                    'status'      => '0', // Estado 0: Pendiente para el panel de administración
                     'latitude'    => $isDelivery ? ($state['latitude'] ?? null) : null,
                     'longitude'   => $isDelivery ? ($state['longitude'] ?? null) : null,
                 ]);
@@ -1153,7 +1156,6 @@ class BotPolling extends Command
                         'price'      => $item['price'],
                         'quantity'   => $item['quantity'],
                     ]);
-                    
 
                     $product = $this->getTodayProductsQuery()->where('id', $item['id'])->first();
                     if ($product) {
@@ -1169,22 +1171,6 @@ class BotPolling extends Command
             foreach ($cart as $item) {
                 $name = $this->escapeMarkdown($item['name']);
                 $summary .= "• {$name} x {$item['quantity']} (Bs. " . ($item['price'] * $item['quantity']) . ")\n";
-            }
-
-            if ($isDelivery && $assignedDelivery) {
-                $mapsUrl = "https://www.google.com/maps?q={$state['latitude']},{$state['longitude']}";
-
-                $msgDelivery = "🚴‍♂️ *¡NUEVO PEDIDO ASIGNADO!*\n\n"
-                             . $summary . "\n"
-                             . "💰 *Total a Cobrar:* Bs. {$state['total']}\n"
-                             . "📍 *Ubicación de Entrega:* [Ver en Google Maps]({$mapsUrl})\n\n"
-                             . "Por favor ponte en marcha lo antes posible.";
-
-                try {
-                    $telegram->sendMessage($assignedDelivery->user_telegram, $msgDelivery, 'Markdown');
-                } catch (\Exception $e) {
-                    $this->error("Error al notificar al repartidor ID {$assignedDelivery->id}: " . $e->getMessage());
-                }
             }
 
             $deliveryMessage = $isDelivery
