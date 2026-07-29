@@ -12,6 +12,9 @@ class Buy extends Model
         'client',
         'type',
         'status',
+        'latitude',
+        'longitude',
+        'cancel_reason',
     ];
 
     protected $casts = [
@@ -31,6 +34,7 @@ class Buy extends Model
     public function getStatusTextAttribute()
     {
         return match ($this->status) {
+            -1 => 'Anulado',
             0 => 'Pendiente',
             1 => 'En camino',
             2 => 'Entregado',
@@ -41,6 +45,7 @@ class Buy extends Model
     public function getStatusColorAttribute()
     {
         return match ($this->status) {
+            -1 => 'danger',
             0 => 'warning',
             1 => 'info',
             2 => 'success',
@@ -53,5 +58,27 @@ class Buy extends Model
         return $this->details->sum(function ($detail) {
             return $detail->price;
         });
+    }
+
+    /**
+     * Cancel the buy, restoring stock and setting status to -1.
+     */
+    public function cancel(string $reason = 'Comprobante inválido'): void
+    {
+        // Restore stock for each detail
+        foreach ($this->details as $detail) {
+            $product = $detail->product;
+            if ($product) {
+                $availability = $product->todayAvailability()->first();
+                if ($availability) {
+                    $availability->increment('stock');
+                }
+            }
+        }
+
+        $this->update([
+            'status' => '-1',
+            'cancel_reason' => $reason,
+        ]);
     }
 }

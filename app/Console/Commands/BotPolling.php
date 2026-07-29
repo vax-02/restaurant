@@ -6,11 +6,15 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use App\Models\Product;
+use App\Models\Buy;         // Asume que tienes el modelo Buy
+use App\Models\BuyDetail;   // Asume que tienes el modelo BuyDetail
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Types\Inline\InlineKeyboardMarkup;
 use TelegramBot\Api\Types\ReplyKeyboardMarkup;
 use TelegramBot\Api\Types\ReplyKeyboardRemove;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 #[Signature('app:bot-polling')]
 #[Description('Iniciar bot de Telegram en modo polling')]
@@ -59,11 +63,12 @@ class BotPolling extends Command
                     $chatId = $message->getChat()->getId();
                     $text = $message->getText() ?? '';
                     $location = $message->getLocation();
+                    $photos = $message->getPhoto(); // Capturar fotos enviadas
                     $firstName = $message->getChat()->getFirstName() ?? 'Usuario';
 
                     $this->info("📩 Mensaje de {$firstName}: {$text}");
 
-                    $this->handleMessage($telegram, $chatId, $text, $location, $firstName);
+                    $this->handleMessage($telegram, $chatId, $text, $location, $photos, $firstName);
                 }
 
             } catch (\Exception $e) {
@@ -73,7 +78,7 @@ class BotPolling extends Command
         }
     }
 
-    protected function handleMessage($telegram, $chatId, $text, $location, $firstName)
+    protected function handleMessage($telegram, $chatId, $text, $location, $photos, $firstName)
     {
         $state = $this->userStates[$chatId]['state'] ?? null;
 
@@ -83,7 +88,7 @@ class BotPolling extends Command
         }
 
         if ($state === 'awaiting_voucher') {
-            $this->receiveVoucher($telegram, $chatId, $text);
+            $this->receiveVoucher($telegram, $chatId, $text, $photos);
             return;
         }
 
@@ -480,7 +485,6 @@ class BotPolling extends Command
             return;
         }
 
-        // Agregar o actualizar item en el Carrito
         if (!isset($this->userStates[$chatId]['cart'])) {
             $this->userStates[$chatId]['cart'] = [];
         }
@@ -552,17 +556,8 @@ class BotPolling extends Command
             return;
         }
 
-        // Descontar stock de todos los productos en el carrito
         $total = 0;
         foreach ($cart as $item) {
-            $product = $this->getTodayProductsQuery()->where('id', $item['id'])->first();
-            
-            if ($product) {
-                $todayAvailability = $product->dailyAvailabilities->first();
-                if ($todayAvailability) {
-                    $todayAvailability->decrement('stock', $item['quantity']);
-                }
-            }
             $total += ($item['price'] * $item['quantity']);
         }
 
@@ -584,7 +579,7 @@ class BotPolling extends Command
 
         $telegram->sendMessage(
             $chatId,
-            "✅ *Pedido registrado!*\n\n"
+            "✅ *Pedido en proceso*\n\n"
             . $summary
             . "• *Total:* Bs. {$total}\n\n"
             . "💳 *Escanea el QR para pagar:*",
@@ -606,39 +601,66 @@ class BotPolling extends Command
 
         $telegram->sendMessage(
             $chatId,
-            "📸 *Envía una foto del comprobante de pago*\n"
-            . "O escribe /confirmar si ya realizaste el pago.\n"
-            . "Escribe /cancelar para cancelar el pedido.",
+            "📸 *Por favor, envía una FOTO del comprobante de pago.*\n"
+            . "Escribe /cancelar si deseas cancelar.",
             'Markdown'
         );
     }
 
-    protected function receiveVoucher($telegram, $chatId, $text)
+    protected function receiveVoucher($telegram, $chatId, $text, $photos)
     {
-        $state = $this->userStates[$chatId] ?? null;
-
-        if (!$state) {
-            return;
-        }
-
         if (trim($text) === '/cancelar') {
             unset($this->userStates[$chatId]);
             $telegram->sendMessage(
                 $chatId,
-                "✅ Pedido cancelado. ¿Necesitas algo más? Usa /menu para ver más opciones."
+                "✅ Pedido cancelado. Usa /menu para ver más opciones."
             );
             return;
         }
 
-        if (trim($text) === '/confirmar') {
-            $this->askDelivery($telegram, $chatId);
-            return;
+        // Validar si el usuario envió una foto
+        if (!empty($photos)) {
+            try {
+                // Telegram envía varios tamaños de la foto; tomamos el último (mayor resolución)
+                $photo = end($photos);
+                $fileId = $photo->getFileId();
+
+                // Obtener objeto File desde la API de Telegram
+                $file = $telegram->getFile($fileId);
+                $filePath = $file->getFilePath();
+
+                // Descargar el archivo desde los servidores de Telegram
+                $token = env('TELEGRAM_BOT_TOKEN');
+                $fileUrl = "https://api.telegram.org/file/bot{$token}/{$filePath}";
+
+                $fileContents = file_get_contents($fileUrl);
+                $fileName = 'vouchers/' . uniqid('voucher_') . '.jpg';
+
+                // Guardar en disco public (storage/app/public/vouchers)
+                Storage::disk('public')->put($fileName, $fileContents);
+
+                // Guardar la ruta en la sesión del usuario
+                $this->userStates[$chatId]['comprobante'] = $fileName;
+
+                $telegram->sendMessage($chatId, "✅ Comprobante recibido correctamente.");
+
+                // Continuar con la selección de tipo de entrega
+                $this->askDelivery($telegram, $chatId);
+                return;
+
+            } catch (\Exception $e) {
+                $this->error("Error guardando comprobante: " . $e->getMessage());
+                $telegram->sendMessage(
+                    $chatId,
+                    "❌ Ocurrió un problema al procesar la foto. Por favor, reenvíala."
+                );
+                return;
+            }
         }
 
         $telegram->sendMessage(
             $chatId,
-            "📸 Por favor, envía una *foto* del comprobante de pago,\n"
-            . "o escribe /confirmar si ya realizaste el pago.",
+            "📸 Necesitamos la *foto del comprobante de pago* para continuar.\nPor favor, adjunta una imagen o escribe /cancelar.",
             'Markdown'
         );
     }
@@ -725,29 +747,85 @@ class BotPolling extends Command
         }
 
         $cart = $state['cart'] ?? [];
-        $summary = "📋 *Detalle del Pedido:*\n";
-        foreach ($cart as $item) {
-            $name = $this->escapeMarkdown($item['name']);
-            $summary .= "• {$name} x {$item['quantity']} (Bs. " . ($item['price'] * $item['quantity']) . ")\n";
+
+        if (empty($cart)) {
+            $telegram->sendMessage($chatId, "❌ Ocurrió un error con el carrito.");
+            unset($this->userStates[$chatId]);
+            return;
         }
-        
-        $deliveryMessage = $isDelivery 
-            ? "🚴‍♂️ *Modalidad:* Delivery\n📍 *Ubicación:* Lat {$state['latitude']}, Long {$state['longitude']}"
-            : "🏪 *Modalidad:* Recoger en local";
 
-        $telegram->sendMessage(
-            $chatId,
-            "🎉 *¡Pedido Confirmado con Éxito!*\n\n"
-            . $summary . "\n"
-            . "• *Total:* Bs. {$state['total']}\n"
-            . "{$deliveryMessage}\n\n"
-            . "Tu pedido ya está en preparación. ¡Muchas gracias por tu compra!",
-            'Markdown',
-            false,
-            null,
-            new ReplyKeyboardRemove()
-        );
+        try {
+            // Asignar un ID de delivery por defecto (ej: 1) o null si la relación lo permite
+            $defaultDeliveryId = 1; 
 
+            // Iniciar transacción en la base de datos
+            DB::transaction(function () use ($chatId, $state, $cart, $isDelivery, $defaultDeliveryId) {
+
+                // 1. Crear el registro de la Compra (Buy)
+                $buy = Buy::create([
+                    'comprobante' => $state['comprobante'] ?? 'sin_comprobante.jpg',
+                    'client'      => (string) $chatId, // ID de Telegram almacenado en client
+                    'type'        => $isDelivery ? 'delivery' : 'restaurant',
+                    'status'      => '0', // 0 = pendiente
+                    'latitude'    => $isDelivery ? ($state['latitude'] ?? null) : null,
+                    'longitude'   => $isDelivery ? ($state['longitude'] ?? null) : null,
+                ]);
+
+                // 2. Crear cada detalle (BuyDetail) y descontar stock
+                foreach ($cart as $item) {
+                    // Múltiples inserciones si compró más de 1 unidad del mismo producto
+                    for ($i = 0; $i < $item['quantity']; $i++) {
+                        BuyDetail::create([
+                            'buy_id'     => $buy->id,
+                            'product_id' => $item['id'],
+                            'price'      => $item['price'],
+                        ]);
+                    }
+
+                    // Descontar stock disponible hoy
+                    $product = $this->getTodayProductsQuery()->where('id', $item['id'])->first();
+                    if ($product) {
+                        $todayAvailability = $product->dailyAvailabilities->first();
+                        if ($todayAvailability) {
+                            $todayAvailability->decrement('stock', $item['quantity']);
+                        }
+                    }
+                }
+            });
+
+            // Resumen para el mensaje final
+            $summary = "📋 *Detalle del Pedido:*\n";
+            foreach ($cart as $item) {
+                $name = $this->escapeMarkdown($item['name']);
+                $summary .= "• {$name} x {$item['quantity']} (Bs. " . ($item['price'] * $item['quantity']) . ")\n";
+            }
+
+            $deliveryMessage = $isDelivery 
+                ? "🚴‍♂️ *Modalidad:* Delivery\n📍 *Ubicación:* Lat {$state['latitude']}, Long {$state['longitude']}"
+                : "🏪 *Modalidad:* Recoger en local";
+
+            $telegram->sendMessage(
+                $chatId,
+                "🎉 *¡Pedido Confirmado y Registrado!*\n\n"
+                . $summary . "\n"
+                . "• *Total:* Bs. {$state['total']}\n"
+                . "{$deliveryMessage}\n\n"
+                . "Tu pedido ya está registrado en nuestro sistema. ¡Muchas gracias por tu compra!",
+                'Markdown',
+                false,
+                null,
+                new ReplyKeyboardRemove()
+            );
+
+        } catch (\Exception $e) {
+            $this->error("Error al registrar el pedido en DB: " . $e->getMessage());
+            $telegram->sendMessage(
+                $chatId,
+                "❌ Ocurrió un error al guardar tu pedido en el sistema. Por favor, ponte en contacto con soporte."
+            );
+        }
+
+        // Limpiar estado
         unset($this->userStates[$chatId]);
     }
 }

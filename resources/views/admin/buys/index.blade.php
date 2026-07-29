@@ -71,21 +71,26 @@
                             </td>
                             <td>{{ $buy->created_at->format('d/m/Y H:i') }}</td>
                             <td>
-                                <form action="{{ route('admin.buys.assign-delivery', $buy) }}" method="POST" class="form-inline">
-                                    @csrf
-                                    @method('PUT')
-                                    <select name="delivery_id" class="form-control form-control-sm mr-1" required>
-                                        <option value="">Seleccionar...</option>
-                                        @foreach($deliveries as $delivery)
-                                            <option value="{{ $delivery->id }}">
-                                                {{ $delivery->full_name }} ({{ $delivery->code }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-motorcycle"></i> Asignar
+                                <div class="btn-group" role="group">
+                                    <form action="{{ route('admin.buys.assign-delivery', $buy) }}" method="POST" class="form-inline">
+                                        @csrf
+                                        @method('PUT')
+                                        <select name="delivery_id" class="form-control form-control-sm mr-1" required>
+                                            <option value="">Seleccionar...</option>
+                                            @foreach($deliveries as $delivery)
+                                                <option value="{{ $delivery->id }}">
+                                                    {{ $delivery->full_name }} ({{ $delivery->code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-motorcycle"></i> Asignar
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-danger btn-sm ml-1" data-toggle="modal" data-target="#cancelModal{{ $buy->id }}" title="Anular pedido">
+                                        <i class="fas fa-ban"></i>
                                     </button>
-                                </form>
+                                </div>
                             </td>
                         </tr>
 
@@ -163,4 +168,49 @@
             </table>
         </div>
     </div>
+
+    <!-- Cancel Modals -->
+    @foreach($buys as $buy)
+        <div class="modal fade" id="cancelModal{{ $buy->id }}" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel{{ $buy->id }}" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger">
+                        <h5 class="modal-title" id="cancelModalLabel{{ $buy->id }}">
+                            <i class="fas fa-ban"></i> Anular Pedido #{{ $buy->id }}
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form action="{{ route('admin.buys.cancel', $buy) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Esta acción anulará el pedido y <strong>restaurará el stock</strong> de los productos.
+                            </div>
+                            <div class="form-group">
+                                <label for="cancel_reason{{ $buy->id }}">Motivo de anulación:</label>
+                                <select name="cancel_reason" id="cancel_reason{{ $buy->id }}" class="form-control" required>
+                                    <option value="">Seleccionar motivo...</option>
+                                    <option value="Comprobante inválido">Comprobante inválido</option>
+                                    <option value="Cliente canceló">Cliente canceló</option>
+                                    <option value="Error en el pedido">Error en el pedido</option>
+                                    <option value="Producto no disponible">Producto no disponible</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de anular este pedido? El stock será restaurado.')">
+                                <i class="fas fa-ban"></i> Anular Pedido
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
 @stop

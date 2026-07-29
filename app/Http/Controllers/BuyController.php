@@ -84,6 +84,21 @@ class BuyController extends Controller
     }
 
     /**
+     * Cancel a buy with reason, restore stock.
+     */
+    public function cancel(Request $request, Buy $buy)
+    {
+        $request->validate([
+            'cancel_reason' => 'required|string|max:255',
+        ]);
+
+        $buy->cancel($request->cancel_reason);
+
+        return redirect()->back()
+            ->with('success', 'Pedido #' . $buy->id . ' anulado correctamente. Stock restaurado.');
+    }
+
+    /**
      * Assign a delivery to a pending buy.
      */
     public function assignDelivery(Request $request, Buy $buy)
