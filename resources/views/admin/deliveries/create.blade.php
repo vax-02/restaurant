@@ -42,7 +42,7 @@
                 <div class="form-group">
                     <label for="user_telegram">Usuario de Telegram</label>
                     <input type="text" class="form-control @error('user_telegram') is-invalid @enderror" 
-                           id="user_telegram" name="user_telegram" value="{{ old('user_telegram') }}" required>
+                           id="user_telegram" name="user_telegram" value="{{ old('user_telegram') }}" >
                     @error('user_telegram')
                         <span class="invalid-feedback">{{ $message }}</span>
                     @enderror

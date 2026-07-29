@@ -25,51 +25,49 @@ class DashboardController extends Controller
         };
         
         $totalOrders = Buy::count();
-        
         $todayOrders = Buy::whereDate('created_at', today())->count();
-        
         $pendingOrders = Buy::where('status', '0')->count();
-        
         $inProgressOrders = Buy::where('status', '1')->where('type', 'delivery')->count();
-        
-        $updatedToday = Buy::whereDate('updated_at', today())->where('status', '2')->count();
-        
+        $deliveredToday = Buy::whereDate('updated_at', today())->where('status', '2')->count();
         $cancelledOrders = Buy::where('status', '-1')->count();
         
-        // Filtered revenue
-        /*$revenueQuery = Buy::where('status', '2');
-        if ($dateFilter[0] && $dateFilter[1]) {
-            $revenueQuery->whereBetween('updated_at', [$dateFilter[0]->startOfDay(), $dateFilter[1]->endOfDay()]);
-        }*/
-        //$filteredRevenue = $revenueQuery->sum('total') ?? 0;
+        // Cálculo de ingresos reales sumando los detalles de las compras completadas (status = 2)
+        $totalRevenue = BuyDetail::whereHas('buy', function($q) {
+            $q->where('status', '2');
+        })->sum(DB::raw('price * quantity')) ?? 0;
         
-        $totalRevenue = Buy::where('status', '2')->count() ?? 0;
+        $todayRevenue = BuyDetail::whereHas('buy', function($q) {
+            $q->where('status', '2')->whereDate('updated_at', today());
+        })->sum(DB::raw('price * quantity')) ?? 0;
         
-        $todayRevenue = Buy::where('status', '2')
-            ->whereDate('updated_at', today())
-            ->count() ?? 0;
-        
-        $monthRevenue = Buy::where('status', '2')
-            ->whereMonth('updated_at', now()->month)
-            ->whereYear('updated_at', now()->year)
-            ->count() ?? 0;
+        $monthRevenue = BuyDetail::whereHas('buy', function($q) {
+            $q->where('status', '2')
+              ->whereMonth('updated_at', now()->month)
+              ->whereYear('updated_at', now()->year);
+        })->sum(DB::raw('price * quantity')) ?? 0;
         
         $totalDeliveries = Delivery::count();
         $activeDeliveries = Delivery::where('status', 1)
             ->whereNotNull('user_telegram')
             ->count();
         
-        // Repartidor con más pedidos
-        $topDelivery = Delivery::withCount('buys')
+        // Top 5 Repartidores con más pedidos entregados
+        $topDeliveries = Delivery::withCount(['buys' => function($q) {
+                $q->where('status', '2');
+            }])
             ->orderBy('buys_count', 'desc')
-            ->first();
+            ->limit(5)
+            ->get();
         
-        // Filtered top products
+        // Top 5 Productos más vendidos
         $topProductsQuery = BuyDetail::select(
                 'product_id',
                 DB::raw('SUM(quantity) as total_sold'),
                 DB::raw('SUM(price * quantity) as total_revenue')
             )
+            ->whereHas('buy', function($q) {
+                $q->where('status', '2');
+            })
             ->with('product')
             ->groupBy('product_id')
             ->orderBy('total_sold', 'desc')
@@ -83,67 +81,38 @@ class DashboardController extends Controller
         }
         $topProducts = $topProductsQuery->get();
         
-        // Filtered recent orders
-        $recentOrdersQuery = Buy::with(['delivery'])
+        // Pedidos Recientes
+        $recentOrdersQuery = Buy::with(['delivery', 'details'])
             ->orderBy('created_at', 'desc')
             ->limit(10);
         
         if ($dateFilter[0] && $dateFilter[1]) {
             $recentOrdersQuery->whereBetween('created_at', [$dateFilter[0]->startOfDay(), $dateFilter[1]->endOfDay()]);
         }
-        $recentOrders = $recentOrdersQuery->get();
         
-        $salesData = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $salesData[] = [
-                'date' => $date->format('d/m'),
-                'count' => Buy::where('status', '2')
-                    ->whereDate('updated_at', $date)
-                    ->count(),
-                'revenue' => Buy::where('status', '2')
-                    ->whereDate('updated_at', $date)
-                    ->count() ?? 0,
-            ];
-        }
-        
-        $statusData = [
-            'pendientes' => Buy::where('status', '0')->count(),
-            'en_camino' => Buy::where('status', '1')->count(),
-            'entregados' => Buy::where('status', '2')->count(),
-            'cancelados' => Buy::where('status', '-1')->count(),
-        ];
-        
-        $monthlySales = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $date = Carbon::today()->subMonths($i);
-            $monthlySales[] = [
-                'month' => $date->format('M'),
-                'revenue' => Buy::where('status', '2')
-                    ->whereMonth('updated_at', $date->month)
-                    ->whereYear('updated_at', $date->year)
-                    ->count() ?? 0,
-            ];
-        }
-        
+        $recentOrders = $recentOrdersQuery->get()->map(function($order) {
+            // Calcular total acumulado dinámicamente
+            $order->total_amount = $order->details->sum(function($detail) {
+                return $detail->price * $detail->quantity;
+            });
+            return $order;
+        });
+
         return view('admin.dashboard', compact(
             'totalOrders',
             'todayOrders',
             'pendingOrders',
             'inProgressOrders',
-            'updatedToday',
+            'deliveredToday',
             'cancelledOrders',
             'totalRevenue',
             'todayRevenue',
             'monthRevenue',
             'totalDeliveries',
             'activeDeliveries',
-            'topDelivery',
+            'topDeliveries',
             'topProducts',
             'recentOrders',
-            'salesData',
-            'statusData',
-            'monthlySales',
             'period'
         ));
     }

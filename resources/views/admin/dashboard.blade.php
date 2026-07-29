@@ -6,10 +6,10 @@
     <div class="d-flex justify-content-between align-items-center">
         <h1>Dashboard</h1>
         <div class="btn-group">
-            <button class="btn btn-sm btn-outline-secondary" onclick="filterDashboard('today')">Hoy</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="filterDashboard('week')">Esta Semana</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="filterDashboard('month')">Este Mes</button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="filterDashboard('all')">Todo</button>
+            <a href="{{ route('admin.dashboard', ['period' => 'today']) }}" class="btn btn-sm {{ $period == 'today' ? 'btn-secondary' : 'btn-outline-secondary' }}">Hoy</a>
+            <a href="{{ route('admin.dashboard', ['period' => 'week']) }}" class="btn btn-sm {{ $period == 'week' ? 'btn-secondary' : 'btn-outline-secondary' }}">Esta Semana</a>
+            <a href="{{ route('admin.dashboard', ['period' => 'month']) }}" class="btn btn-sm {{ $period == 'month' ? 'btn-secondary' : 'btn-outline-secondary' }}">Este Mes</a>
+            <a href="{{ route('admin.dashboard', ['period' => 'all']) }}" class="btn btn-sm {{ $period == 'all' ? 'btn-secondary' : 'btn-outline-secondary' }}">Todo</a>
         </div>
     </div>
 @stop
@@ -48,13 +48,13 @@
         <div class="col-lg-2 col-md-4 col-6">
             <div class="small-box bg-warning">
                 <div class="inner">
-                    <h3>Bs{{ number_format($totalRevenue, 2) }}</h3>
+                    <h3>Bs {{ number_format($totalRevenue, 2) }}</h3>
                     <p>Ingresos Totales</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-dollar-sign"></i>
                 </div>
-                <a href="#" class="small-box-footer">
+                <a href="{{ route('admin.buys.index') }}" class="small-box-footer">
                     Más info <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -62,13 +62,13 @@
         <div class="col-lg-2 col-md-4 col-6">
             <div class="small-box bg-danger">
                 <div class="inner">
-                    <h3>Bs{{ number_format($todayRevenue, 2) }}</h3>
+                    <h3>Bs {{ number_format($todayRevenue, 2) }}</h3>
                     <p>Ingresos Hoy</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
-                <a href="#" class="small-box-footer">
+                <a href="{{ route('admin.buys.index') }}" class="small-box-footer">
                     Más info <i class="fas fa-arrow-circle-right"></i>
                 </a>
             </div>
@@ -103,8 +103,10 @@
         </div>
     </div>
 
+    <!-- Top Products y Top Deliveries -->
     <div class="row">
-          <div class="col-md-6">
+        <!-- Top Productos -->
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
@@ -118,7 +120,7 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-striped">
+                    <table class="table table-striped mb-0">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -133,7 +135,7 @@
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $product->product->name ?? 'Producto #' . $product->product_id }}</td>
                                     <td><span class="badge badge-success">{{ $product->total_sold }}</span></td>
-                                    <td>${{ number_format($product->total_revenue, 2) }}</td>
+                                    <td>Bs {{ number_format($product->total_revenue, 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -146,11 +148,12 @@
             </div>
         </div>
 
+        <!-- Top Repartidores -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-trophy mr-1"></i>
+                        <i class="fas fa-motorcycle mr-1"></i>
                         Top 5 Repartidores
                     </h3>
                     <div class="card-tools">
@@ -160,23 +163,24 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-striped">
+                    <table class="table table-striped mb-0">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Nombre</th>
-                                <th>Cantidad</th>
+                                <th>Entregas Realizadas</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($topProducts as $index => $product)
+                            @forelse($topDeliveries as $index => $delivery)
                                 <tr>
-                                    <td>{{ $product->product->name ?? 'Producto #' . $product->product_id }}</td>
-                                    <td><span class="badge badge-success">{{ $product->total_sold }}</span></td>
-                                    
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $delivery->name }} {{ $delivery->lastname }}</td>
+                                    <td><span class="badge badge-info">{{ $delivery->buys_count }}</span></td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">No hay productos vendidos aún</td>
+                                    <td colspan="3" class="text-center text-muted">No hay entregas registradas aún</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -186,7 +190,7 @@
         </div>
     </div>
 
-    <!-- Recent Orders Table -->
+    <!-- Tabla de Pedidos Recientes -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -221,9 +225,9 @@
                             <tbody>
                                 @forelse($recentOrders as $order)
                                     <tr>
-                                        <td>{{ $order->id }}</td>
+                                        <td>#{{ $order->id }}</td>
                                         <td>{{ $order->client ?? 'N/A' }}</td>
-                                        <td>${{ number_format($order->total, 2) }}</td>
+                                        <td>Bs {{ number_format($order->total_amount, 2) }}</td>
                                         <td>
                                             @php
                                                 $statusBadge = match((int)$order->status) {
@@ -289,7 +293,7 @@
                 <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text">Entregados Hoy</span>
-                    <span class="info-box-number"></span>
+                    <span class="info-box-number">{{ $deliveredToday }}</span>
                 </div>
             </div>
         </div>
