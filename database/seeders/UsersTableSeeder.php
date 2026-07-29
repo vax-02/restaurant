@@ -22,28 +22,11 @@ class UsersTableSeeder extends Seeder
             'role' => User::ROLE_ADMIN,
         ]);
 
-        // 2. Repartidores
-        User::create([
-            'name' => 'Carlos Repartidor',
-            'email' => 'carlos@repartidor.com',
-            'password' => Hash::make('password'),
-            'role' => User::ROLE_DELIVERY,
-        ]);
-
-        User::create([
-            'name' => 'Maria Repartidora',
-            'email' => 'maria@repartidor.com',
-            'password' => Hash::make('password'),
-            'role' => User::ROLE_DELIVERY,
-        ]);
-
         // 3. Clientes (5 clientes de prueba)
         $clientes = [
-            ['Juan Pérez', 'juan@cliente.com'],
-            ['Ana Gómez', 'ana@cliente.com'],
-            ['Luis Martínez', 'luis@cliente.com'],
-            ['Carmen López', 'carmen@cliente.com'],
-            ['Pedro Sánchez', 'pedro@cliente.com'],
+            ['Juan Pérez', 'juan@restaurante.com'],
+            ['Ana Gómez', 'ana@restaurante.com'],
+            ['Luis Martínez', 'luis@restaurante.com'],
         ];
 
         foreach ($clientes as [$nombre, $email]) {
@@ -51,7 +34,7 @@ class UsersTableSeeder extends Seeder
                 'name' => $nombre,
                 'email' => $email,
                 'password' => Hash::make('password'),
-                'role' => User::ROLE_CLIENT,
+                'role' => User::ROLE_AYUDANTE,
             ]);
         }
     }

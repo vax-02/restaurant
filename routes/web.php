@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\BuyController;
 use App\Http\Controllers\DailyAvailabilityController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Auth;
@@ -31,11 +33,19 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     // CRUD de usuarios (solo administradores)
     Route::resource('users', UserController::class);
+    Route::get('buys/all', [BuyController::class, 'all'])->name('buys.all');
+    Route::put('buys/{buy}/assign-delivery', [BuyController::class, 'assignDelivery'])->name('buys.assign-delivery');
+    Route::put('buys/{buy}/cancel', [BuyController::class, 'cancel'])->name('buys.cancel');
+    Route::resource('buys', BuyController::class);
+    Route::resource('deliveries', DeliveryController::class);
+    Route::post('deliveries/{delivery}/regenerate-code', [DeliveryController::class, 'regenerateCode'])->name('deliveries.regenerate-code');
+
+
     Route::resource('products', ProductController::class);
     Route::post('products/toggle', [ProductController::class,'toggleAvailable'])->name('products.toggle');
 
 
-    Route::get('availability', [DailyAvailabilityController::class, 'index'])
+    Route::get('availability', [DailyAvailabilityController::class,  'index'])
         ->name('availability.index');
     Route::post('availability', [DailyAvailabilityController::class, 'update'])
         ->name('availability.update');
