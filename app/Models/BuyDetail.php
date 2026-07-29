@@ -10,6 +10,7 @@ class BuyDetail extends Model
         'buy_id',
         'product_id',
         'price',
+        'quantity'
     ];
 
     protected $casts = [
@@ -25,4 +26,5 @@ class BuyDetail extends Model
     {
         return $this->belongsTo(Product::class);
     }
+    
 }

@@ -1152,6 +1152,7 @@ class BotPolling extends Command
                             'buy_id'     => $buy->id,
                             'product_id' => $item['id'],
                             'price'      => $item['price'],
+                            'quantity'   => $item['quantity'],
                         ]);
                     }
 
