@@ -19,6 +19,9 @@ return new class extends Migration
             $table->enum('type',['delivery','restaurant']);
             // 0 pendiente : 1 asignado/en camino : 2 entregado
             $table->enum('status',[0,1,2])->default(0); 
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
+
             $table->timestamps();
         });
     }

@@ -33,6 +33,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     // CRUD de usuarios (solo administradores)
     Route::resource('users', UserController::class);
+    Route::get('buys/all', [BuyController::class, 'all'])->name('buys.all');
+    Route::put('buys/{buy}/assign-delivery', [BuyController::class, 'assignDelivery'])->name('buys.assign-delivery');
     Route::resource('buys', BuyController::class);
     Route::resource('deliveries', DeliveryController::class);
     Route::post('deliveries/{delivery}/regenerate-code', [DeliveryController::class, 'regenerateCode'])->name('deliveries.regenerate-code');
