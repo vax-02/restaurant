@@ -118,7 +118,7 @@ class BuyController extends Controller
             'delivery_id' => $delivery->id,
             'status' => '1', // En camino
         ]);
-
+        
         return redirect()->route('admin.buys.index')
             ->with('success', 'Pedido asignado a ' . $delivery->full_name . ' correctamente');
     }

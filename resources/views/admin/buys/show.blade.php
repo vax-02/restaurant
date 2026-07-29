@@ -97,11 +97,19 @@
                                     <th>Producto</th>
                                     <th>Categoría</th>
                                     <th>Precio</th>
+                                    <th>Cantidad</th>
+
                                 </tr>
                             </thead>
                             <tbody>
+                                @php
+                                    $total = 0
+                                @endphp
                                 @foreach($buy->details as $index => $detail)
                                     <tr>
+                                        @php
+                                            $total += $detail->price * $detail->quantity
+                                        @endphp
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $detail->product->name ?? 'Producto eliminado' }}</td>
                                         <td>
@@ -114,13 +122,15 @@
                                             @endif
                                         </td>
                                         <td>Bs. {{ number_format($detail->price, 2) }}</td>
+                                        <td>Bs. {{ $detail->quantity }}</td>
+
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="3" class="text-right">TOTAL</th>
-                                    <th>Bs. {{ number_format($buy->total, 2) }}</th>
+                                    <th colspan="4" class="text-right">TOTAL</th>
+                                    <th>Bs. {{ number_format($total, 2) }}</th>
                                 </tr>
                             </tfoot>
                         </table>

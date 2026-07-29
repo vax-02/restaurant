@@ -38,7 +38,6 @@
                         <th>Cliente</th>
                         <th>Tipo</th>
                         <th>Delivery</th>
-                        <th>Total</th>
                         <th>Estado</th>
                         <th>Comprobante</th>
                         <th>Fecha</th>
@@ -62,8 +61,8 @@
                                     <span class="text-muted">No asignado</span>
                                 @endif
                             </td>
-                            <td><strong>Bs. {{ number_format($buy->total, 2) }}</strong></td>
                             <td>
+                                
                                 <span class="badge badge-{{ $buy->status_color }}">{{ $buy->status_text }}</span>
                                 @if($buy->status == '-1' && $buy->cancel_reason)
                                     <br><small class="text-danger"><i class="fas fa-info-circle"></i> {{ $buy->cancel_reason }}</small>

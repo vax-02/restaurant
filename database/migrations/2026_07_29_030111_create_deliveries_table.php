@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('deliveries', function (Blueprint $table) {
             $table->id();
             $table->string('code',50);
-            $table->boolean('status')->default(1);
+            $table->boolean('status')->default(0);
             $table->string('name',50);
             $table->string('lastname',50);
             $table->string('cellphone',8);
