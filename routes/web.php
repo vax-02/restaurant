@@ -35,6 +35,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::resource('users', UserController::class);
     Route::resource('buys', BuyController::class);
     Route::resource('deliveries', DeliveryController::class);
+    Route::post('deliveries/{delivery}/regenerate-code', [DeliveryController::class, 'regenerateCode'])->name('deliveries.regenerate-code');
 
 
     Route::resource('products', ProductController::class);
