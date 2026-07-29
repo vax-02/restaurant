@@ -327,12 +327,28 @@ return [
 
 
         // Productos
-        [
-            'text' => 'Productos',
-            'route' => 'admin.products.index',
-            'icon' => 'fas fa-users',
-            'active' => ['admin/products*'],
+         [
+        'text' => 'Productos',
+        'icon' => 'fas fa-utensils',
+        'submenu' => [
+            [
+                'text' => 'Lista de Productos',
+                'route' => 'admin.products.index',
+                'icon' => 'fas fa-list',
+            ],
+            [
+                'text' => 'Nuevo Producto',
+                'route' => 'admin.products.create',
+                'icon' => 'fas fa-plus',
+            ],
+            [
+                'text' => 'Disponibilidad Hoy',
+                'route' => 'admin.availability.index',
+                'icon' => 'fas fa-calendar-day',
+            ],
         ],
+        'active' => ['admin/products*', 'admin/availability*'],
+    ],
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',

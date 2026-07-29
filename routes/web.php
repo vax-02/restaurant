@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DailyAvailabilityController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,15 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::resource('products', ProductController::class);
     Route::post('products/toggle', [ProductController::class,'toggleAvailable'])->name('products.toggle');
 
+
+    Route::get('availability', [DailyAvailabilityController::class, 'index'])
+        ->name('availability.index');
+    Route::post('availability', [DailyAvailabilityController::class, 'update'])
+        ->name('availability.update');
+    Route::post('availability/reset', [DailyAvailabilityController::class, 'resetToday'])
+        ->name('availability.reset');
+    Route::post('availability/{product}/stock', [DailyAvailabilityController::class, 'updateStock'])
+        ->name('availability.stock');
 
     Route::middleware(['can:admin'])->group(function () {
     });
