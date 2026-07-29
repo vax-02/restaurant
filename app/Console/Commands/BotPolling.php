@@ -87,20 +87,13 @@ class BotPolling extends Command
     {
         $state = $this->userStates[$chatId]['state'] ?? null;
 
-        // ==========================================
-        // MANEJO DE UBICACIÓN EN VIVO DEL DELIVERY
-        // ==========================================
-        if ($state === 'delivery_tracking') {
-            $this->handleDeliveryLocation($telegram, $chatId, $location);
-            return;
-        }
-
-        // ==========================================
-        // COMANDOS DEL DELIVERY
-        // ==========================================
         $trimmedText = trim($text);
 
-        if ($trimmedText === '/entregado') {
+        if ($trimmedText === '/entregado' || $trimmedText === '/entregar') {
+            $this->confirmDelivery($telegram, $chatId);
+            return;
+        }
+        if ($trimmedText === '/entregar') {
             $this->confirmDelivery($telegram, $chatId);
             return;
         }
@@ -109,7 +102,12 @@ class BotPolling extends Command
             $this->cancelDelivery($telegram, $chatId);
             return;
         }
+        if ($state === 'delivery_tracking') {
+            $this->handleDeliveryLocation($telegram, $chatId, $location);
+            return;
+        }
 
+        
         // ==========================================
         // FLUJO DE COMPRA (Cliente)
         // ==========================================
@@ -324,122 +322,138 @@ class BotPolling extends Command
      */
     protected function confirmDelivery($telegram, $chatId)
     {
+        $chatIdStr = (string) $chatId;
+
+        // 1. Obtener al repartidor por su Telegram ID
+        $delivery = Delivery::where('user_telegram', $chatIdStr)->first();
+
+        if (!$delivery) {
+            $telegram->sendMessage(
+                $chatId,
+                "❌ Tu cuenta no está registrada como repartidor. Usa /repartidor <codigo> para vincularte.",
+                'Markdown'
+            );
+            return;
+        }
+
+        // 2. Intentar obtener el buy_id de la memoria, o buscarlo directamente en la BD (status 1 = en camino)
         $buyId = $this->userStates[$chatId]['buy_id'] ?? null;
 
-        if (!$buyId) {
-            $telegram->sendMessage(
-                $chatId,
-                "❌ No hay pedido activo para confirmar entrega.",
-                'Markdown'
-            );
-            return;
+        if ($buyId) {
+            $buy = Buy::find($buyId);
+        } else {
+            // Respuesto si se reinició el script: buscar el último pedido asignado a este repartidor en camino
+            $buy = Buy::where('delivery_id', $delivery->id)
+                ->where('status', '1')
+                ->latest()
+                ->first();
         }
 
-        $buy = Buy::with('delivery')->find($buyId); 
         if (!$buy) {
-            $telegram->sendMessage($chatId, "❌ Pedido no encontrado.");
-            unset($this->userStates[$chatId]);
-            return;
-        }
-
-        $delivery = Delivery::where('user_telegram', $chatId)->first();
-
-        if (!$delivery || $buy->delivery_id != $delivery->id) {
             $telegram->sendMessage(
                 $chatId,
-                "❌ No tienes permiso para confirmar esta entrega.",
+                "❌ No tienes ningún pedido activo en camino para entregar.",
                 'Markdown'
             );
             return;
         }
 
-        // El repartidor vuelve a estar activo/disponible (status = 1)
-        /*$delivery->update([
-            'status' => 1
-        ]);*/
-        
-        // El pedido pasa a estado Entregado (status = 2)
-        /*$buy->update([
-            'status' => 2,
-            'updated_at' => now(),
-        ]);*/
+        // 3. Cambiar estados
+        $delivery->status = 1; // Vuelve a estar activo/disponible
+        $delivery->save();
+
+        $buy->status = '2'; // Entregado
+        $buy->save();
 
         unset($this->userStates[$chatId]);
 
         $telegram->sendMessage(
             $chatId,
-            "✅ *¡Pedido #{$buy->id} entregado!*\n\n"
-            . "👍 ¡Excelente trabajo!",
+            "✅ *¡Pedido #{$buy->id} entregado con éxito!*\n\n👍 ¡Buen trabajo!",
             'Markdown',
             false,
             null,
             new ReplyKeyboardRemove()
         );
 
-        $clientChatId = $buy->client;
-        if ($clientChatId) {
-            $telegram->sendMessage(
-                $clientChatId,
-                "✅ *¡Tu pedido #{$buy->id} ha sido entregado!*\n\n"
-                . "✨ *¡Gracias por tu compra!* 🙏\n"
-                . "Esperamos verte pronto. ¡Disfruta tu pedido! 🍽️",
-                'Markdown'
-            );
+        // Notificar al cliente
+        if ($buy->client) {
+            try {
+                $telegram->sendMessage(
+                    $buy->client,
+                    "✅ *¡Tu pedido #{$buy->id} ha sido entregado!*\n\n✨ ¡Gracias por tu compra! 🍽️",
+                    'Markdown'
+                );
+            } catch (\Exception $e) {
+                Log::error("Error al notificar cliente: " . $e->getMessage());
+            }
         }
 
-        $this->info("✅ Pedido #{$buyId} entregado por delivery ID {$delivery->id}");
+        $this->info("✅ Pedido #{$buy->id} entregado por delivery ID {$delivery->id}");
     }
+
 
     /**
      * Cancelar entrega en curso
      */
     protected function cancelDelivery($telegram, $chatId)
     {
-        $buyId = $this->userStates[$chatId]['buy_id'] ?? null;
+        $chatIdStr = (string) $chatId;
 
-        if (!$buyId) {
-            $telegram->sendMessage($chatId, "❌ No hay pedido activo.");
+        $delivery = Delivery::where('user_telegram', $chatIdStr)->first();
+
+        if (!$delivery) {
+            $telegram->sendMessage($chatId, "❌ No estás registrado como repartidor.");
             return;
         }
 
-        $buy = Buy::find($buyId);
+        $buyId = $this->userStates[$chatId]['buy_id'] ?? null;
 
-        if ($buy) {
-            // El pedido pasa a pendiente (status = 0) para que el admin lo reasigne
-            $buy->update([
-                'status' => '0',
-                'delivery_id' => null,
-                'cancel_reason' => 'Cancelado por el repartidor',
-            ]);
+        if ($buyId) {
+            $buy = Buy::find($buyId);
+        } else {
+            $buy = Buy::where('delivery_id', $delivery->id)
+                ->where('status', '1')
+                ->latest()
+                ->first();
         }
 
-        // El repartidor vuelve a estar disponible (status = 1)
-        $delivery = Delivery::where('user_telegram', $chatId)->first();
-        if ($delivery) {
-            $delivery->update([
-                'status' => 1
-            ]);
+        if (!$buy) {
+            $telegram->sendMessage($chatId, "❌ No tienes ningún pedido activo en camino para cancelar.");
+            return;
         }
+
+        // 1. El pedido vuelve a estar pendiente para el admin (status = '0')
+        $buy->status = '0';
+        $buy->delivery_id = null;
+        $buy->cancel_reason = 'Cancelado por el repartidor';
+        $buy->save();
+
+        // 2. El repartidor vuelve a estar disponible (status = 1)
+        $delivery->status = 1;
+        $delivery->save();
 
         unset($this->userStates[$chatId]);
 
         $telegram->sendMessage(
             $chatId,
-            "⛔ *Entrega cancelada*",
+            "⛔ *Entrega del pedido #{$buy->id} cancelada.* El pedido ha vuelto al panel para ser reasignado.",
             'Markdown',
             false,
             null,
             new ReplyKeyboardRemove()
         );
 
-        if ($buy && $buy->client) {
-            $telegram->sendMessage(
-                $buy->client,
-                "⛔ *Tu pedido #{$buy->id} ha sido cancelado*\n\n"
-                . "El repartidor no pudo completar la entrega.\n"
-                . "Contacta al restaurante para más información.",
-                'Markdown'
-            );
+        if ($buy->client) {
+            try {
+                $telegram->sendMessage(
+                    $buy->client,
+                    "⛔ *Tu pedido #{$buy->id} ha sido cancelado por el repartidor.*\nContacta con el restaurante.",
+                    'Markdown'
+                );
+            } catch (\Exception $e) {
+                Log::error("Error notificando cancelación al cliente: " . $e->getMessage());
+            }
         }
     }
 
