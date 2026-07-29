@@ -223,9 +223,80 @@ El sistema debe permitir:
 **para** actualizar el estado del pedido.
 
 **Criterios de Aceptación:**
-1. Dado que estoy en el destino, cuando toco el botón "Llegué", entonces el estado cambia a "En destino" y el cliente recibe notificación.
 2. Dado que entregué el pedido, cuando toco el botón "Entregado", entonces el estado cambia a "Entregado" y el cliente recibe notificación.
 3. Dado que confirmo "Entregado", cuando lo hago, entonces el panel actualiza el estado y archiva el pedido.
-4. Dado que confirmo "Entregado", cuando lo hago, entonces solicito una foto o código de verificación.
+
+---
+
+
+### 🔵 Épica 3: Panel de Administración
+
+#### HU-A-01: Autenticarse en el panel
+
+**Como** administrador,  
+**quiero** iniciar sesión en el panel web,  
+**para** gestionar el sistema de forma segura.
+
+**Criterios de Aceptación:**
+1. Dado que intento acceder a una ruta protegida, cuando no estoy autenticado, entonces soy redirigido al login.
+2. Dado que ingreso credenciales correctas, cuando hago clic en "Iniciar sesión", entonces accedo al dashboard.
+3. Dado que ingreso credenciales incorrectas, cuando intento iniciar sesión, entonces veo un mensaje de error.
+4. Dado que estoy autenticado, cuando cierro sesión, entonces no puedo acceder a las rutas protegidas.
+
+---
+
+#### HU-A-02: Gestionar productos del menú
+
+**Como** administrador,  
+**quiero** crear, leer, editar y eliminar productos (platos y bebidas) ,  
+**para** mantener actualizado el menú del restaurante.
+
+**Criterios de Aceptación:**
+1. Dado que estoy en el panel, cuando selecciono "Platos", entonces veo la lista de platos existentes.
+2. Dado que estoy en la lista de platos, cuando hago clic en "Crear plato", entonces puedo ingresar nombre, descripción y precio
+3. Dado que estoy viendo un plato, cuando hago clic en "Editar", entonces puedo modificar sus datos.
+4. Dado que estoy viendo un plato, cuando hago clic en "Eliminar", entonces el plato se elimina y desaparece del menú.
+5. Dado que modifico el stock cuando creo una especificacion de hoy añado stok en otra tabla relacionada a productos
+
+---
+
+
+#### HU-A-03: Administrar tablero de pedidos
+
+**Como** administrador,  
+**quiero** ver todos los pedidos y cambiar su estado manualmente,  
+**para** gestionar el flujo completo de pedidos.
+
+**Criterios de Aceptación:**
+1. Dado que estoy en el panel, cuando selecciono "Pedidos", entonces veo una tabla con todos los pedidos, su estado y fecha.
+2. Dado que estoy viendo un pedido, cuando hago clic en "Ver detalle", entonces veo el comprobante de pago, platos, total y ubicación.
+3. Dado que estoy en el detalle de un pedido, cuando cambio el estado a "Confirmado", entonces el bot notifica al cliente.
+4. Dado que estoy en el detalle de un pedido, cuando cambio el estado a "Cancelado", entonces el bot notifica al cliente.
+
+---
+
+#### HU-A-04: Aceptar pagos
+
+**Como** administrador,  
+**quiero** ver el comprobante enviado por el cliente y confirmar el pago,  
+**para** liberar el pedido para su preparación.
+
+**Criterios de Aceptación:**
+1. Dado que un cliente envió un comprobante, cuando estoy en el detalle del pedido, entonces veo la imagen del comprobante.
+2. Dado que estoy viendo el comprobante, cuando hago clic en "asignar", entonces el estado cambia a "en camino".
+3. Dado que confirmo el pago, cuando lo hago, entonces el bot notifica al cliente que el delivery esta en camino.
+
+---
+
+#### HU-A-06: Asignar repartidores
+
+**Como** administrador,  
+**quiero** asignar un repartidor a un pedido desde el panel,  
+**para** coordinar la entrega.
+
+**Criterios de Aceptación:**
+1. Dado que estoy en el detalle del pedido, cuando selecciono un repartidor del selector y confirmo, entonces el repartidor recibe la notificación.
+2. Dado que asigno un repartidor, cuando lo hago, entonces el estado del pedido cambia a "en camino".
+3. Dado que un pedido ya tiene repartidor, cuando lo reasigno a otro, entonces el repartidor anterior deja de verlo y el nuevo recibe la notificación.
 
 ---
