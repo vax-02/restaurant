@@ -336,9 +336,15 @@ return [
             'text' => 'Pedidos',
             'route' => 'admin.buys.index',
             'icon' => 'fas fa-wallet',
-            'active' => ['admin/buys*'],
         ],
 
+
+        // Usuarios
+        [
+            'text' => 'Delivery',
+            'route' => 'admin.deliveries.index',
+            'icon' => 'fas fa-users',
+        ],
         // Productos
          [
         'text' => 'Productos',
