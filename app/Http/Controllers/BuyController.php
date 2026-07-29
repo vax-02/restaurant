@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Buy;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class BuyController extends Controller
@@ -12,7 +13,8 @@ class BuyController extends Controller
      */
     public function index()
     {
-        //
+        $buys = Buy::all();
+        return view('admin.buys.index', compact('buys'));
     }
 
     /**
